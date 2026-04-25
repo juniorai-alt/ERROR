@@ -11,16 +11,37 @@
       padding: 20px;
       max-width: 400px;
       margin: auto;
+      padding-bottom: 60px; /* space for footer */
     }
-.card {
+   .card {
       background: #1a1a1a;
       border: 1px solid #d4af37;
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
     }
-    h2 { text-align: center; color: #d4af37; margin: 10px 0; }
+    h2 { text-align: center; color: #d4af37; margin: 10px 0 5px 0; }
     h3 { margin: 0 0 15px 0; }
+   .clock {
+      text-align: center;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+   .music-control {
+      text-align: center;
+      margin: 10px 0;
+    }
+   .music-btn {
+      background: #333;
+      color: #d4af37;
+      border: 1px solid #d4af37;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      width: auto;
+      margin: 0;
+    }
     input {
       width: 100%;
       padding: 12px;
@@ -44,17 +65,17 @@
     }
     button:hover { opacity: 0.9; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-secondary {
+   .btn-secondary {
       background: #333;
       color: #d4af37;
       border: 1px solid #d4af37;
     }
-.btn-whatsapp {
+   .btn-whatsapp {
       background: #25D366;
       color: #fff;
       border: none;
     }
-.btn-danger {
+   .btn-danger {
       background: #5c1a1a;
       color: #ff6b6b;
       border: 1px solid #ff6b6b;
@@ -63,21 +84,21 @@
       width: auto;
       margin: 0;
     }
-.list { margin-top: 20px; font-size: 14px; }
-.contact-item {
+   .list { margin-top: 20px; font-size: 14px; }
+   .contact-item {
       padding: 8px 0;
       border-bottom: 1px solid #333;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-.status {
+   .status {
       font-size: 12px;
       color: #888;
       text-align: center;
       margin-top: 10px;
     }
-.progress-bar {
+   .progress-bar {
       width: 100%;
       height: 8px;
       background: #333;
@@ -85,13 +106,13 @@
       margin: 10px 0;
       overflow: hidden;
     }
-.progress-fill {
+   .progress-fill {
       height: 100%;
       background: #d4af37;
       width: 0%;
       transition: width 0.3s ease;
     }
-.admin-toggle {
+   .admin-toggle {
       text-align: center;
       margin: 15px 0;
       font-size: 12px;
@@ -99,12 +120,47 @@
       cursor: pointer;
       text-decoration: underline;
     }
-  #adminPanel { display: none; }
-  #joinGroupBtn { display: none; margin-top: 15px; }
+    #adminPanel { display: none; }
+    #joinGroupBtn { display: none; margin-top: 15px; }
+    
+    /* Scrolling Footer */
+   .marquee-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #1a1a1a;
+      border-top: 1px solid #d4af37;
+      padding: 10px 0;
+      overflow: hidden;
+      z-index: 100;
+    }
+   .marquee-text {
+      display: inline-block;
+      white-space: nowrap;
+      animation: scroll-left 15s linear infinite;
+      color: #d4af37;
+      font-size: 13px;
+      font-weight: bold;
+      padding-left: 100%;
+    }
+    @keyframes scroll-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
   </style>
 </head>
 <body>
   <h2>404 ERROR VCF</h2>
+  <div class="clock" id="timeNow">Loading time...</div>
+  
+  <!-- Music Control -->
+  <div class="music-control">
+    <button class="music-btn" id="musicBtn" onclick="toggleMusic()">▶ Play Music</button>
+    <audio id="bgMusic" loop>
+      <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
+    </audio>
+  </div>
 
   <!-- User Form -->
   <div class="card">
@@ -121,7 +177,6 @@
       <div id="contacts"></div>
     </div>
 
-    <!-- WhatsApp Join Button - shows after user submits -->
     <button class="btn-whatsapp" id="joinGroupBtn" onclick="joinWhatsApp()">Join WhatsApp Group</button>
 
     <div class="status" id="status">Connecting...</div>
@@ -142,10 +197,15 @@
     </div>
   </div>
 
+  <!-- Moving Footer -->
+  <div class="marquee-footer">
+    <div class="marquee-text">Developed by UNBORN GEN-JUNIOR AI • 404 ERROR VCF System • Reserve Your Place • Curated Connections • </div>
+  </div>
+
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getDatabase, ref, push, onValue, remove, set, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+    import { getDatabase, ref, push, onValue, remove, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyA4L8OdOUvJ9IlbB--nhOd_SGYI9pj8LL0",
@@ -163,8 +223,41 @@
     const configRef = ref(db, '404_error_config');
 
     let contacts = [];
-    let whatsappLink = 'https://chat.whatsapp.com/Hk0iAmiCCn72YM8R1IDwfW'; // Default - change this
+    let whatsappLink = 'https://chat.whatsapp.com/YOUR_GROUP_INVITE_LINK';
     const MAX_MEMBERS = 400;
+
+    // Music Control
+    window.toggleMusic = function() {
+      const audio = document.getElementById('bgMusic');
+      const btn = document.getElementById('musicBtn');
+      if (audio.paused) {
+        audio.play().then(() => {
+          btn.textContent = '⏸ Pause Music';
+        }).catch(() => {
+          alert('Click anywhere on the page first, then try playing music');
+        });
+      } else {
+        audio.pause();
+        btn.textContent = '▶ Play Music';
+      }
+    }
+
+    // Live clock - EAT timezone
+    function updateTime() {
+      const now = new Date();
+      const options = {
+        timeZone: 'Africa/Nairobi',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      };
+      document.getElementById('timeNow').textContent = now.toLocaleString('en-KE', options) + ' EAT';
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
 
     // Load WhatsApp link from Firebase
     onValue(configRef, (snapshot) => {
@@ -233,7 +326,7 @@
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
         document.getElementById('status').textContent = 'Contact saved!';
-        document.getElementById('joinGroupBtn').style.display = 'block'; // Show join button
+        document.getElementById('joinGroupBtn').style.display = 'block';
         setTimeout(() => document.getElementById('status').textContent = 'Synced ✓', 2000);
       }).catch((error) => {
         alert('Save failed: ' + error.message);
