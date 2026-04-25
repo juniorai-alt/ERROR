@@ -11,9 +11,9 @@
       padding: 20px;
       max-width: 400px;
       margin: auto;
-      padding-bottom: 60px; /* space for footer */
+      padding-bottom: 60px;
     }
-   .card {
+  .card {
       background: #1a1a1a;
       border: 1px solid #d4af37;
       border-radius: 12px;
@@ -22,17 +22,17 @@
     }
     h2 { text-align: center; color: #d4af37; margin: 10px 0 5px 0; }
     h3 { margin: 0 0 15px 0; }
-   .clock {
+  .clock {
       text-align: center;
       font-size: 12px;
       color: #888;
       margin-bottom: 10px;
     }
-   .music-control {
+  .music-control {
       text-align: center;
       margin: 10px 0;
     }
-   .music-btn {
+  .music-btn {
       background: #333;
       color: #d4af37;
       border: 1px solid #d4af37;
@@ -65,17 +65,17 @@
     }
     button:hover { opacity: 0.9; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-   .btn-secondary {
+  .btn-secondary {
       background: #333;
       color: #d4af37;
       border: 1px solid #d4af37;
     }
-   .btn-whatsapp {
+  .btn-whatsapp {
       background: #25D366;
       color: #fff;
       border: none;
     }
-   .btn-danger {
+  .btn-danger {
       background: #5c1a1a;
       color: #ff6b6b;
       border: 1px solid #ff6b6b;
@@ -84,21 +84,21 @@
       width: auto;
       margin: 0;
     }
-   .list { margin-top: 20px; font-size: 14px; }
-   .contact-item {
+  .list { margin-top: 20px; font-size: 14px; }
+  .contact-item {
       padding: 8px 0;
       border-bottom: 1px solid #333;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-   .status {
+  .status {
       font-size: 12px;
       color: #888;
       text-align: center;
       margin-top: 10px;
     }
-   .progress-bar {
+  .progress-bar {
       width: 100%;
       height: 8px;
       background: #333;
@@ -106,13 +106,13 @@
       margin: 10px 0;
       overflow: hidden;
     }
-   .progress-fill {
+  .progress-fill {
       height: 100%;
       background: #d4af37;
       width: 0%;
       transition: width 0.3s ease;
     }
-   .admin-toggle {
+  .admin-toggle {
       text-align: center;
       margin: 15px 0;
       font-size: 12px;
@@ -121,10 +121,17 @@
       text-decoration: underline;
     }
     #adminPanel { display: none; }
+    #adminLogin { display: none; }
     #joinGroupBtn { display: none; margin-top: 15px; }
+  .error-text {
+      color: #ff6b6b;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 8px;
+      display: none;
+    }
     
-    /* Scrolling Footer */
-   .marquee-footer {
+  .marquee-footer {
       position: fixed;
       bottom: 0;
       left: 0;
@@ -135,7 +142,7 @@
       overflow: hidden;
       z-index: 100;
     }
-   .marquee-text {
+  .marquee-text {
       display: inline-block;
       white-space: nowrap;
       animation: scroll-left 15s linear infinite;
@@ -154,7 +161,6 @@
   <h2>404 ERROR VCF</h2>
   <div class="clock" id="timeNow">Loading time...</div>
   
-  <!-- Music Control -->
   <div class="music-control">
     <button class="music-btn" id="musicBtn" onclick="toggleMusic()">▶ Play Music</button>
     <audio id="bgMusic" loop>
@@ -180,7 +186,16 @@
     <button class="btn-whatsapp" id="joinGroupBtn" onclick="joinWhatsApp()">Join WhatsApp Group</button>
 
     <div class="status" id="status">Connecting...</div>
-    <div class="admin-toggle" onclick="toggleAdmin()">Admin Login</div>
+    <div class="admin-toggle" onclick="showAdminLogin()">Admin Login</div>
+  </div>
+
+  <!-- Admin Login -->
+  <div class="card" id="adminLogin">
+    <h3>Admin Access</h3>
+    <input type="password" id="adminPassword" placeholder="Enter Admin Password">
+    <div class="error-text" id="passError">Wrong password</div>
+    <button class="btn-secondary" onclick="checkAdminPassword()">Login</button>
+    <button class="btn-secondary" onclick="hideAdminLogin()">Cancel</button>
   </div>
 
   <!-- Admin Panel -->
@@ -191,18 +206,17 @@
     <button class="btn-secondary" onclick="downloadVCF()">Download All as VCF</button>
     <button class="btn-secondary" onclick="downloadCSV()">Export All to CSV</button>
     <button class="btn-secondary" onclick="clearAllContacts()">Clear All Contacts</button>
+    <button class="btn-danger" onclick="logoutAdmin()">Logout Admin</button>
 
     <div class="list" id="adminContacts">
       <strong style="margin-top:15px;display:block;">All Members:</strong>
     </div>
   </div>
 
-  <!-- Moving Footer -->
   <div class="marquee-footer">
     <div class="marquee-text">Developed by UNBORN GEN-JUNIOR AI • 404 ERROR VCF System • Reserve Your Place • Curated Connections • </div>
   </div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getDatabase, ref, push, onValue, remove, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
@@ -225,6 +239,8 @@
     let contacts = [];
     let whatsappLink = 'https://chat.whatsapp.com/YOUR_GROUP_INVITE_LINK';
     const MAX_MEMBERS = 400;
+    const ADMIN_PASSWORD = 'unborn2026'; // CHANGE THIS PASSWORD
+    let isAdminLoggedIn = false;
 
     // Music Control
     window.toggleMusic = function() {
@@ -297,6 +313,35 @@
       console.error(error);
     });
 
+    // Admin Login System
+    window.showAdminLogin = function() {
+      document.getElementById('adminLogin').style.display = 'block';
+      document.getElementById('adminPassword').value = '';
+      document.getElementById('passError').style.display = 'none';
+    }
+
+    window.hideAdminLogin = function() {
+      document.getElementById('adminLogin').style.display = 'none';
+    }
+
+    window.checkAdminPassword = function() {
+      const inputPass = document.getElementById('adminPassword').value;
+      if (inputPass === ADMIN_PASSWORD) {
+        isAdminLoggedIn = true;
+        document.getElementById('adminLogin').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('passError').style.display = 'none';
+      } else {
+        document.getElementById('passError').style.display = 'block';
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+
+    window.logoutAdmin = function() {
+      isAdminLoggedIn = false;
+      document.getElementById('adminPanel').style.display = 'none';
+    }
+
     // Add contact
     window.addContact = function() {
       if (contacts.length >= MAX_MEMBERS) {
@@ -335,7 +380,6 @@
       });
     }
 
-    // Join WhatsApp Group
     window.joinWhatsApp = function() {
       if (whatsappLink && whatsappLink.includes('chat.whatsapp.com')) {
         window.open(whatsappLink, '_blank');
@@ -344,8 +388,8 @@
       }
     }
 
-    // Save WhatsApp link - admin only
     window.saveGroupLink = function() {
+      if (!isAdminLoggedIn) return;
       const link = document.getElementById('groupLink').value.trim();
       if (!link.includes('chat.whatsapp.com')) {
         alert('Please enter a valid WhatsApp group invite link');
@@ -357,22 +401,22 @@
       });
     }
 
-    // Delete single contact - admin only
     window.deleteContact = function(key) {
+      if (!isAdminLoggedIn) return;
       if (confirm('Delete this contact?')) {
         remove(ref(db, `404_error_contacts/${key}`));
       }
     }
 
-    // Clear all contacts - admin only
     window.clearAllContacts = function() {
+      if (!isAdminLoggedIn) return;
       if (confirm('Delete ALL contacts? This cannot be undone.')) {
         remove(contactsRef);
       }
     }
 
-    // Download VCF - admin only
     window.downloadVCF = function() {
+      if (!isAdminLoggedIn) return;
       if (contacts.length === 0) {
         alert('No contacts to download');
         return;
@@ -394,8 +438,8 @@ END:VCARD
       downloadFile(vcfContent, `404_ERROR_VCF_${contacts.length}_members.vcf`, 'text/vcard');
     }
 
-    // Download CSV - admin
     window.downloadCSV = function() {
+      if (!isAdminLoggedIn) return;
       if (contacts.length === 0) {
         alert('No contacts to export');
         return;
@@ -422,15 +466,12 @@ END:VCARD
       URL.revokeObjectURL(url);
     }
 
-    // Toggle admin panel
-    window.toggleAdmin = function() {
-      const panel = document.getElementById('adminPanel');
-      const isVisible = panel.style.display === 'block';
-      panel.style.display = isVisible? 'none' : 'block';
-    }
-
     document.getElementById('phone').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') addContact();
+    });
+
+    document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') checkAdminPassword();
     });
   </script>
 </body>
