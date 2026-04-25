@@ -295,11 +295,294 @@ END:VCARD
     }
 
     document.getElementById('phone').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') addContact();
+<!DOCTYPE html>
+<html>
+<head>
+  <title>404 ERROR VCF - Register Contact</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #d4af37;
+      padding: 20px;
+      max-width: 400px;
+      margin: auto;
+    }
+.card {
+      background: #1a1a1a;
+      border: 1px solid #d4af37;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    h2 { text-align: center; color: #d4af37; margin: 10px 0; }
+    h3 { margin: 0 0 15px 0; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      background: #0a0a0a;
+      border: 1px solid #d4af37;
+      border-radius: 8px;
+      color: white;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #d4af37;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-top: 12px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+      background: #333;
+      color: #d4af37;
+      border: 1px solid #d4af37;
+    }
+.btn-danger {
+      background: #5c1a1a;
+      color: #ff6b6b;
+      border: 1px solid #ff6b6b;
+      padding: 6px 10px;
+      font-size: 12px;
+      width: auto;
+      margin: 0;
+    }
+.list { margin-top: 20px; font-size: 14px; }
+.contact-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+.status {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      margin-top: 10px;
+    }
+.progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+.progress-fill {
+      height: 100%;
+      background: #d4af37;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+.admin-toggle {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 12px;
+      color: #888;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  #adminPanel { display: none; }
+  </style>
+</head>
+<body>
+  <h2>404 ERROR VCF</h2>
+
+  <!-- User Form -->
+  <div class="card">
+    <h3>Register Contact</h3>
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="tel" id="phone" placeholder="Contact (+254...)" required>
+    <button onclick="addContact()" id="addBtn">Submit Contact</button>
+
+    <div class="list">
+      <strong>Members Added: <span id="count">0</span> / 400</strong>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div id="contacts"></div>
+    </div>
+
+    <div class="status" id="status">Connecting...</div>
+    <div class="admin-toggle" onclick="toggleAdmin()">Admin Login</div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div class="card" id="adminPanel">
+    <h3>Admin Panel</h3>
+    <button class="btn-secondary" onclick="downloadVCF()">Download All as VCF</button>
+    <button class="btn-secondary" onclick="downloadCSV()">Export All to CSV</button>
+    <button class="btn-secondary" onclick="clearAllContacts()">Clear All Contacts</button>
+    <p style="font-size:11px;color:#888;margin-top:15px;">
+      Access raw data: Firebase Console → Realtime Database → 404_error_contacts
+    </p>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getDatabase, ref, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA4L8OdOUvJ9IlbB--nhOd_SGYI9pj8LL0",
+      authDomain: "eeror-733ac.firebaseapp.com",
+      databaseURL: "https://eeror-733ac-default-rtdb.firebaseio.com",
+      projectId: "eeror-733ac",
+      storageBucket: "eeror-733ac.firebasestorage.app",
+      messagingSenderId: "398067289132",
+      appId: "1:398067289132:web:50f5c3bdceff78d1f19589"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const contactsRef = ref(db, '404_error_contacts');
+
+    let contacts = [];
+    const MAX_MEMBERS = 400;
+
+    // Load + sync data from Firebase
+    onValue(contactsRef, (snapshot) => {
+      contacts = [];
+      document.getElementById('contacts').innerHTML = '';
+
+      if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+          const key = childSnapshot.key;
+          const contact = childSnapshot.val();
+          contacts.push({...contact, key });
+
+          const adminMode = document.getElementById('adminPanel').style.display === 'block';
+          const deleteBtn = adminMode? `<button class="btn-danger" onclick="deleteContact('${key}')">X</button>` : '';
+
+          document.getElementById('contacts').innerHTML +=
+            `<div class="contact-item">
+              <span>${contact.name}</span>
+              <span>${contact.phone} ${deleteBtn}</span>
+            </div>`;
+        });
+      }
+
+      document.getElementById('count').textContent = contacts.length;
+      const progressPercent = (contacts.length / MAX_MEMBERS) * 100;
+      document.getElementById('progressFill').style.width = Math.min(progressPercent, 100) + '%';
+
+      document.getElementById('status').textContent = 'Synced ✓';
+      document.getElementById('addBtn').disabled = contacts.length >= MAX_MEMBERS;
+    }, (error) => {
+      document.getElementById('status').textContent = 'Error: Check Firebase config';
+      console.error(error);
     });
-  </script>
-</body>
-</html>
+
+    // Add contact
+    window.addContact = function() {
+      if (contacts.length >= MAX_MEMBERS) {
+        alert('Maximum 400 members reached');
+        return;
+      }
+
+      const name = document.getElementById('name').value.trim();
+      let phone = document.getElementById('phone').value.trim();
+
+      if (!name ||!phone) {
+        alert('Please enter both name and phone number');
+        return;
+      }
+
+      if (phone.startsWith('07')) phone = '+254' + phone.substring(1);
+      if (phone.startsWith('7') && phone.length === 9) phone = '+254' + phone;
+
+      document.getElementById('addBtn').disabled = true;
+      document.getElementById('status').textContent = 'Saving...';
+
+      push(contactsRef, {
+        name: name,
+        phone: phone,
+        timestamp: Date.now()
+      }).then(() => {
+        document.getElementById('name').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('status').textContent = 'Contact saved!';
+        setTimeout(() => document.getElementById('status').textContent = 'Synced ✓', 2000);
+      }).catch((error) => {
+        alert('Save failed: ' + error.message);
+      }).finally(() => {
+        document.getElementById('addBtn').disabled = false;
+      });
+    }
+
+    // Delete single contact - admin only
+    window.deleteContact = function(key) {
+      if (confirm('Delete this contact?')) {
+        remove(ref(db, `404_error_contacts/${key}`));
+      }
+    }
+
+    // Clear all contacts - admin only
+    window.clearAllContacts = function() {
+      if (confirm('Delete ALL contacts? This cannot be undone.')) {
+        remove(contactsRef);
+      }
+    }
+
+    // Download VCF - admin only now
+    window.downloadVCF = function() {
+      if (contacts.length === 0) {
+        alert('No contacts to download');
+        return;
+      }
+
+      let vcfContent = '';
+      contacts.forEach(contact => {
+        vcfContent += `BEGIN:VCARD
+VERSION:3.0
+FN:${contact.name}
+TEL;TYPE=CELL:${contact.phone}
+ORG:404 ERROR
+TITLE:Member
+NOTE:Reserve Your Place - Curated connections, limited seats
+END:VCARD
+`;
+      });
+
+      downloadFile(vcfContent, `404_ERROR_VCF_${contacts.length}_members.vcf`, 'text/vcard');
+    }
+
+    // Download CSV - admin
+    window.downloadCSV = function() {
+      if (contacts.length === 0) {
+        alert('No contacts to export');
+        return;
+      }
+
+      let csv = 'Name,Phone,Date Added\n';
+      contacts.forEach(c => {
+        const date = new Date(c.timestamp).toLocaleDateString();
+        csv += `"${c.name}","${c.phone}","${date}"\n`;
+      });
+
+      downloadFile(csv, `404_ERROR_members_${contacts.length}.csv`, 'text/csv');
+    }
+
+    function downloadFile(content, filename, type) {
+      const blob = new Blob([content], { type: type + ';charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
 
     // Toggle admin panel
     window.toggleAdmin = function() {
@@ -314,4 +597,4 @@ END:VCARD
     });
   </script>
 </body>
-    </html>
+</html>
