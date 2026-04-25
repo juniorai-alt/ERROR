@@ -136,11 +136,10 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getDatabase, ref, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-    // 1. PASTE YOUR FIREBASE CONFIG HERE
     const firebaseConfig = {
       apiKey: "AIzaSyA4L8OdOUvJ9IlbB--nhOd_SGYI9pj8LL0",
       authDomain: "eeror-733ac.firebaseapp.com",
-      databaseURL: "https://https://eeror-733ac-default-rtdb.firebaseio.com,
+      databaseURL: "https://eeror-733ac-default-rtdb.firebaseio.com",
       projectId: "eeror-733ac",
       storageBucket: "eeror-733ac.firebasestorage.app",
       messagingSenderId: "398067289132",
@@ -286,6 +285,21 @@ END:VCARD
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
+
+    // Toggle admin panel
+    window.toggleAdmin = function() {
+      const panel = document.getElementById('adminPanel');
+      const isVisible = panel.style.display === 'block';
+      panel.style.display = isVisible? 'none' : 'block';
+      onValue(contactsRef, () => {}, { onlyOnce: true });
+    }
+
+    document.getElementById('phone').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') addContact();
+    });
+  </script>
+</body>
+</html>
 
     // Toggle admin panel
     window.toggleAdmin = function() {
