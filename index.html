@@ -49,6 +49,11 @@
       color: #d4af37;
       border: 1px solid #d4af37;
     }
+.btn-whatsapp {
+      background: #25D366;
+      color: #fff;
+      border: none;
+    }
 .btn-danger {
       background: #5c1a1a;
       color: #ff6b6b;
@@ -95,6 +100,7 @@
       text-decoration: underline;
     }
   #adminPanel { display: none; }
+  #joinGroupBtn { display: none; margin-top: 15px; }
   </style>
 </head>
 <body>
@@ -115,6 +121,9 @@
       <div id="contacts"></div>
     </div>
 
+    <!-- WhatsApp Join Button - shows after user submits -->
+    <button class="btn-whatsapp" id="joinGroupBtn" onclick="joinWhatsApp()">Join WhatsApp Group</button>
+
     <div class="status" id="status">Connecting...</div>
     <div class="admin-toggle" onclick="toggleAdmin()">Admin Login</div>
   </div>
@@ -122,18 +131,21 @@
   <!-- Admin Panel -->
   <div class="card" id="adminPanel">
     <h3>Admin Panel</h3>
+    <input type="text" id="groupLink" placeholder="Paste WhatsApp Group Link Here">
+    <button class="btn-secondary" onclick="saveGroupLink()">Save Group Link</button>
     <button class="btn-secondary" onclick="downloadVCF()">Download All as VCF</button>
     <button class="btn-secondary" onclick="downloadCSV()">Export All to CSV</button>
     <button class="btn-secondary" onclick="clearAllContacts()">Clear All Contacts</button>
-    <p style="font-size:11px;color:#888;margin-top:15px;">
-      Access raw data: Firebase Console → Realtime Database → 404_error_contacts
-    </p>
+
+    <div class="list" id="adminContacts">
+      <strong style="margin-top:15px;display:block;">All Members:</strong>
+    </div>
   </div>
 
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getDatabase, ref, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+    import { getDatabase, ref, push, onValue, remove, set, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyA4L8OdOUvJ9IlbB--nhOd_SGYI9pj8LL0",
@@ -148,14 +160,24 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const contactsRef = ref(db, '404_error_contacts');
+    const configRef = ref(db, '404_error_config');
 
     let contacts = [];
+    let whatsappLink = 'https://chat.whatsapp.com/Hk0iAmiCCn72YM8R1IDwfW'; // Default - change this
     const MAX_MEMBERS = 400;
 
-    // Load + sync data from Firebase
+    // Load WhatsApp link from Firebase
+    onValue(configRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.val().whatsappLink) {
+        whatsappLink = snapshot.val().whatsappLink;
+        document.getElementById('groupLink').value = whatsappLink;
+      }
+    });
+
+    // Load + sync contacts from Firebase
     onValue(contactsRef, (snapshot) => {
       contacts = [];
-      document.getElementById('contacts').innerHTML = '';
+      document.getElementById('adminContacts').innerHTML = '<strong style="margin-top:15px;display:block;">All Members:</strong>';
 
       if (snapshot.exists()) {
         snapshot.forEach((childSnapshot) => {
@@ -163,13 +185,10 @@
           const contact = childSnapshot.val();
           contacts.push({...contact, key });
 
-          const adminMode = document.getElementById('adminPanel').style.display === 'block';
-          const deleteBtn = adminMode? `<button class="btn-danger" onclick="deleteContact('${key}')">X</button>` : '';
-
-          document.getElementById('contacts').innerHTML +=
+          document.getElementById('adminContacts').innerHTML +=
             `<div class="contact-item">
               <span>${contact.name}</span>
-              <span>${contact.phone} ${deleteBtn}</span>
+              <span>${contact.phone} <button class="btn-danger" onclick="deleteContact('${key}')">X</button></span>
             </div>`;
         });
       }
@@ -214,11 +233,34 @@
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
         document.getElementById('status').textContent = 'Contact saved!';
+        document.getElementById('joinGroupBtn').style.display = 'block'; // Show join button
         setTimeout(() => document.getElementById('status').textContent = 'Synced ✓', 2000);
       }).catch((error) => {
         alert('Save failed: ' + error.message);
       }).finally(() => {
         document.getElementById('addBtn').disabled = false;
+      });
+    }
+
+    // Join WhatsApp Group
+    window.joinWhatsApp = function() {
+      if (whatsappLink && whatsappLink.includes('chat.whatsapp.com')) {
+        window.open(whatsappLink, '_blank');
+      } else {
+        alert('WhatsApp group link not set by admin yet');
+      }
+    }
+
+    // Save WhatsApp link - admin only
+    window.saveGroupLink = function() {
+      const link = document.getElementById('groupLink').value.trim();
+      if (!link.includes('chat.whatsapp.com')) {
+        alert('Please enter a valid WhatsApp group invite link');
+        return;
+      }
+      set(configRef, { whatsappLink: link }).then(() => {
+        alert('WhatsApp link saved!');
+        whatsappLink = link;
       });
     }
 
@@ -236,7 +278,7 @@
       }
     }
 
-    // Download VCF - admin only now
+    // Download VCF - admin only
     window.downloadVCF = function() {
       if (contacts.length === 0) {
         alert('No contacts to download');
@@ -292,7 +334,6 @@ END:VCARD
       const panel = document.getElementById('adminPanel');
       const isVisible = panel.style.display === 'block';
       panel.style.display = isVisible? 'none' : 'block';
-      onValue(contactsRef, () => {}, { onlyOnce: true });
     }
 
     document.getElementById('phone').addEventListener('keypress', function(e) {
